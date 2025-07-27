@@ -1,0 +1,55 @@
+library(nplr)
+library(drc)
+library(lmtest)
+library(multcomp)
+library(sandwich)
+library(mgcv)
+library(xlsx)
+library(writexl)
+library(Rcmdr)
+
+######Stonerollers
+
+Stonerollers <- 
+  readXL("C:/Users/sshad/Documents/Texas A&M/Mussel Research/Salinity Project/NM Popenaias Analysis/live_r_stonerollers_round3.xlsx",
+   rownames=FALSE, header=TRUE, na="", sheet="Sheet1", stringsAsFactors=TRUE)
+
+attach(Stonerollers)
+
+######GAM raw counts
+
+GAM <- gam(counts~ s(Treatment, k=7), data=Stonerollers)
+anova(GAM)
+summary(GAM)
+str(summary(GAM))
+ca <- as.data.frame(summary(GAM)$s.table)
+ba <- as.data.frame(summary(GAM)$r.sq)
+bb <- as.data.frame(summary(GAM)$dev.expl)
+GAM.predict <- predict.gam(GAM)
+counts2 <- cbind(ba, bb)
+names(counts2)[1] <- "R2"
+names(counts2)[2] <- "Dev Explained"
+c1 <- cbind(ca, counts2)
+write.csv(c1,"C:/Users/sshad/Documents/Texas A&M/Mussel Research/Salinity Project/NM Popenaias Analysis/Round 3 Final/livejuvGAM.csv")
+
+####get predicted and SE values
+GAM.se <- predict.gam(GAM, se.fit = TRUE)$se.fit
+#calculate 95% confidence intervals
+GAM.lcl <- GAM.predict - 1.96 * GAM.se
+GAM.ucl <- GAM.predict + 1.96 * GAM.se
+
+######Plot
+
+######When you are ready to export use this and then run plot code####
+tiff(filename = "C:/Users/sshad/Documents/Texas A&M/Mussel Research/Salinity Project/NM Popenaias Analysis/Round 3 Final/livejuvGAM.tif", res = 500, pointsize = 12,
+     width = 2400, height = 2400, type = "windows")
+
+
+plot(counts ~ Treatment, type ="n", ylab = "Juveniles", xlab = "Treatment", ylim= c(0.0,25.0), xlim= c(0.0, 6.5), data=Stonerollers, cex=1, cex.axis=1.2, cex.lab=1.3)
+points(Treatment, counts, col = ("grey60"), pch=19, cex=1.5)
+lines(Treatment, GAM.predict, lwd=2)
+lines(Treatment, GAM.lcl, lwd=1.5, lty=2)
+lines(Treatment, GAM.ucl, lwd=1.5, lty=2)
+
+#####Use this after you run plot code when getting ready to export###
+dev.off() 
